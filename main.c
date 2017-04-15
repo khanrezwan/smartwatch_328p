@@ -11,7 +11,7 @@
 #include <util/delay.h>
 #include <compat/twi.h>
 #include "i2c.h"
-
+#include "bitmap.h"
 
 //////////////ADXL345/////////////////////
 #define ADXL345_I2C_Address    0x53        // I2C ADXL345 Device 7bit
@@ -51,7 +51,6 @@ int USART_receive( FILE *stream) {
 }
 //////////////USART END
 
-
 ///////////OLED 1306 128 x 64 software SPI//////////////////////
 /// PORTA = 0, PORTB = 1, PORTC = 2, PORTD = 3
 #define OLED_CS PN(2,3)  // PC3
@@ -62,10 +61,11 @@ int USART_receive( FILE *stream) {
 
 u8g_t u8g;
 int yPos = 0;
+uint8_t Index = 0;
 void draw(void) {
 
-	u8g_SetFont(&u8g, u8g_font_unifont);
-	u8g_DrawStr(&u8g, 0, yPos, "Hello World!");
+	//u8g_SetFont(&u8g, u8g_font_unifont);
+	u8g_DrawBitmapP(&u8g, 10, 15, 2, 16, ICON_BITMAP_2);
 }
 
 void OLED_init() {
@@ -74,60 +74,90 @@ void OLED_init() {
 	u8g_SetContrast(&u8g, 55);
 }
 
-
 ////////////ADXL345 Functions start//////////////////////////////
-void init_ADXL345()
-{
-	i2c_start(ADXL345_I2C_Address,TW_WRITE);
+void init_ADXL345_double_tap(void) {
+	i2c_start(ADXL345_I2C_Address, TW_WRITE);
+	i2c_write(0x01D); // THRESH_TAP Register
+	i2c_write(0x50); //5g
+	i2c_stop();
+
+	i2c_start(ADXL345_I2C_Address, TW_WRITE);
+	i2c_write(0x022); //Latent register
+	i2c_write(0x05);
+	i2c_stop();
+
+	i2c_start(ADXL345_I2C_Address, TW_WRITE);
+	i2c_write(0x023); //window register
+	i2c_write(0xFF);
+	i2c_stop();
+
+	i2c_start(ADXL345_I2C_Address, TW_WRITE);
+	i2c_write(0x021); //duration register
+	i2c_write(0x10);
+	i2c_stop();
+
+	i2c_start(ADXL345_I2C_Address, TW_WRITE);
+	i2c_write(0x02A); //tap axis register
+	i2c_write(0b00000111); // all axes
+	i2c_stop();
+
+	i2c_start(ADXL345_I2C_Address, TW_WRITE);
+	i2c_write(0x02E); //Interrupt Enable
+	i2c_write(0b00100000); // all axes
+	i2c_stop();
+
+}
+void init_ADXL345() {
+	init_ADXL345_double_tap();
+	i2c_start(ADXL345_I2C_Address, TW_WRITE);
 	i2c_write(0x02D);
 	i2c_write(0);
 	i2c_stop();
 
-	i2c_start(ADXL345_I2C_Address,TW_WRITE);
+	i2c_start(ADXL345_I2C_Address, TW_WRITE);
 	i2c_write(0x02D);
 	i2c_write(16);
 	i2c_stop();
 
-	i2c_start(ADXL345_I2C_Address,TW_WRITE);
+	i2c_start(ADXL345_I2C_Address, TW_WRITE);
 	i2c_write(0x02D);
 	i2c_write(8);
 	i2c_stop();
 
-	i2c_start(ADXL345_I2C_Address,TW_WRITE);
+	i2c_start(ADXL345_I2C_Address, TW_WRITE);
 	i2c_write(0x31);
-	i2c_write(0x08);//full range +/-2g
+	i2c_write(0x08); //full range +/-2g
 	i2c_stop();
 
 }
 
-char check_ADXL345()
-{
+
+char check_ADXL345() {
 	char data;
-	i2c_start(ADXL345_I2C_Address,TW_WRITE);
+	i2c_start(ADXL345_I2C_Address, TW_WRITE);
 	i2c_write(0x00);
 	i2c_stop();
-	i2c_start(ADXL345_I2C_Address,TW_READ);
-	i2c_read(&data,NACK);
+	i2c_start(ADXL345_I2C_Address, TW_READ);
+	i2c_read(&data, NACK);
 	return data;
 
 }
 
-void read_ADXL345()
-{
-	i2c_start(ADXL345_I2C_Address,TW_WRITE);
+void read_ADXL345() {
+	i2c_start(ADXL345_I2C_Address, TW_WRITE);
 	i2c_write(0x32);
 	i2c_stop();
-	i2c_start(ADXL345_I2C_Address,TW_READ);
-	i2c_read(&buffer[0],ACK);
-	i2c_read(&buffer[1],ACK);
-	i2c_read(&buffer[2],ACK);
-	i2c_read(&buffer[3],ACK);
-	i2c_read(&buffer[4],ACK);
-	i2c_read(&buffer[5],NACK);
+	i2c_start(ADXL345_I2C_Address, TW_READ);
+	i2c_read(&buffer[0], ACK);
+	i2c_read(&buffer[1], ACK);
+	i2c_read(&buffer[2], ACK);
+	i2c_read(&buffer[3], ACK);
+	i2c_read(&buffer[4], ACK);
+	i2c_read(&buffer[5], NACK);
 }
 ////////////ADXL345 Functions end//////////////////////////////
 int main(void) {
-	int dataX,dataY,dataZ;
+	int dataX, dataY, dataZ;
 	/*
 	 CS: PORTC, Bit 3 --> PN(2,1)
 	 A0: PORTC, Bit 0 --> PN(2,0)
@@ -142,27 +172,28 @@ int main(void) {
 	// Initialise the standard IO handlers
 	stdout = fdevopen(USART_send, NULL);
 	stdin = fdevopen(NULL, USART_receive);
-	if(check_ADXL345()==ADXL345_Dev_ID)
-		{
-	//		printf("ready\r\n");
-			init_ADXL345();
-			printf("initialized %d\r\n");
-		}
-		else
-		{
-	//		printf("error\r\n");
-			while(1)
-			{
+	if (check_ADXL345() == ADXL345_Dev_ID) {
+		//		printf("ready\r\n");
+		init_ADXL345();
+		printf("initialized\r\n");
+	} else {
+		//		printf("error\r\n");
+		while (1) {
 
-			}
 		}
-
+	}
 
 	for (;;) {
 		u8g_FirstPage(&u8g);
 		do {
 			draw();
 		} while (u8g_NextPage(&u8g));
+		if (Index < ICON_ARRAY_SIZE) {
+			Index++;
+
+		} else {
+			Index = 0;
+		}
 		if (yPos < 83) {
 			// if it's too slow, you could increment y by a greater number
 			yPos++;
@@ -172,13 +203,13 @@ int main(void) {
 		}
 
 		read_ADXL345();
-				dataX= buffer[1]<<8|buffer[0];
-				dataY= buffer[3]<<8|buffer[2];
-				dataZ= buffer[5]<<8|buffer[4];
-				printf("%d %d %d\r\n",dataX,dataY,dataZ);
+		dataX = buffer[1] << 8 | buffer[0];
+		dataY = buffer[3] << 8 | buffer[2];
+		dataZ = buffer[5] << 8 | buffer[4];
+		printf("%d %d %d\r\n", dataX, dataY, dataZ);
 //		GY521_read();
 //		sprintf(buffer,"%f",&roll);
-//        u8g_Delay(100);
+		u8g_Delay(100);
 	}
 }
 
