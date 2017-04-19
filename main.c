@@ -4,16 +4,18 @@
  *  Created on: Apr 14, 2017
  *      Author: rezwan
  */
-#include "u8g.h"
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include <stdio.h>
 #include <util/delay.h>
-#include <compat/twi.h>
+#include "u8g.h"
+
+#include "adxl345.h"
 #include "i2c.h"
 #include "bitmap.h"
 #include "uart.h"
 #include "circular_buffer.h"
+#include "ds1307.h"
 circBuf_t RX_Q;
 ///////////////PIN Mapping///////
 //OLED
@@ -52,13 +54,6 @@ circBuf_t RX_Q;
 #define Button_PIN_REG PINB
 #define Button_DDR_REG DDRB
 
-//////////////ADXL345/////////////////////
-#define ADXL345_I2C_Address    0x53        // I2C ADXL345 Device 7bit
-#define ADXL345_Dev_ID 0b11100101
-#define ADXL345_TO_READ (6) //read 6 bytes from x_low
-char buffer[6];
-
-//////////////USART END
 
 ///////////OLED 1306 128 x 64 software SPI//////////////////////
 /// PORTA = 0, PORTB = 1, PORTC = 2, PORTD = 3
@@ -78,94 +73,7 @@ void OLED_init() {
 	u8g_SetContrast(&u8g, 55);
 }
 
-////////////ADXL345 Functions start//////////////////////////////
-void init_ADXL345_double_tap(void) {
-	i2c_start(ADXL345_I2C_Address, TW_WRITE);
-	i2c_write(0x01D); // THRESH_TAP Register
-	i2c_write(0x50); //5g
-	i2c_stop();
 
-	i2c_start(ADXL345_I2C_Address, TW_WRITE);
-	i2c_write(0x022); //Latent register
-	i2c_write(0x05);
-	i2c_stop();
-
-	i2c_start(ADXL345_I2C_Address, TW_WRITE);
-	i2c_write(0x023); //window register
-	i2c_write(0xFF);
-	i2c_stop();
-
-	i2c_start(ADXL345_I2C_Address, TW_WRITE);
-	i2c_write(0x021); //duration register
-	i2c_write(0x10);
-	i2c_stop();
-
-	i2c_start(ADXL345_I2C_Address, TW_WRITE);
-	i2c_write(0x02A); //tap axis register
-	i2c_write(0b00000111); // all axes
-	i2c_stop();
-
-	i2c_start(ADXL345_I2C_Address, TW_WRITE);
-	i2c_write(0x02E); //Interrupt Enable
-	i2c_write(0b00100000); // all axes
-	i2c_stop();
-
-}
-void init_ADXL345() {
-	init_ADXL345_double_tap();
-	i2c_start(ADXL345_I2C_Address, TW_WRITE);
-	i2c_write(0x02D);
-	i2c_write(0);
-	i2c_stop();
-
-	i2c_start(ADXL345_I2C_Address, TW_WRITE);
-	i2c_write(0x02D);
-	i2c_write(16);
-	i2c_stop();
-
-	i2c_start(ADXL345_I2C_Address, TW_WRITE);
-	i2c_write(0x02D);
-	i2c_write(8);
-	i2c_stop();
-
-	i2c_start(ADXL345_I2C_Address, TW_WRITE);
-	i2c_write(0x31);
-	i2c_write(0x08); //full range +/-2g
-	i2c_stop();
-
-}
-
-char check_ADXL345() {
-	char data;
-	i2c_start(ADXL345_I2C_Address, TW_WRITE);
-	i2c_write(0x00);
-	i2c_stop();
-	i2c_start(ADXL345_I2C_Address, TW_READ);
-	i2c_read(&data, NACK);
-	return data;
-
-}
-
-void read_ADXL345() {
-	i2c_start(ADXL345_I2C_Address, TW_WRITE);
-	i2c_write(0x32);
-	i2c_stop();
-	i2c_start(ADXL345_I2C_Address, TW_READ);
-	i2c_read(&buffer[0], ACK);
-	i2c_read(&buffer[1], ACK);
-	i2c_read(&buffer[2], ACK);
-	i2c_read(&buffer[3], ACK);
-	i2c_read(&buffer[4], ACK);
-	i2c_read(&buffer[5], NACK);
-}
-void read_interrupt_source_ADXL345() {
-	i2c_start(ADXL345_I2C_Address, TW_WRITE);
-	i2c_write(0x30); //Source of interrupts.
-	i2c_stop();
-	i2c_start(ADXL345_I2C_Address, TW_READ);
-	i2c_read(NULL, NACK);
-}
-////////////ADXL345 Functions end//////////////////////////////
 int main(void) {
 	int dataX, dataY, dataZ;
 	/*
@@ -212,10 +120,8 @@ int main(void) {
 			yPos = 0;
 		}
 
-		read_ADXL345();
-		dataX = buffer[1] << 8 | buffer[0];
-		dataY = buffer[3] << 8 | buffer[2];
-		dataZ = buffer[5] << 8 | buffer[4];
+		read_ADXL345(&dataX,&dataY, &dataZ);
+
 		//printf("%s",RX_Q.buffer);
 		//printf("%d %d %d\r\n", dataX, dataY, dataZ);
 		PORTB &= ~(1 << PB0);
@@ -223,10 +129,8 @@ int main(void) {
 
 			clear_USART_STAUS_REG(UART_STATUS_Command_Complete);
 			printf("%d", check_USART_Complete());
-			//printf(RX_Q.buffer);
+
 		}
-//		GY521_read();
-//		sprintf(buffer,"%f",&roll);
 		u8g_Delay(100);
 	}
 }
