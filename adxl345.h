@@ -17,7 +17,7 @@
 
 void init_ADXL345_double_tap(void);
 void init_ADXL345();
-char check_ADXL345();
+uint8_t check_ADXL345();
 
 void read_ADXL345(int *x, int* y, int *z);
 void read_interrupt_source_ADXL345();

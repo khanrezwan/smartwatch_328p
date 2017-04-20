@@ -7,7 +7,9 @@
 
 #ifndef I2C_H_
 #define I2C_H_
-
+#include <compat/twi.h>
+#include <math.h>
+#include <inttypes.h>
 //////////////I2C related Defines////////////////
 #define F_OSC 16000000 //hz
 #define SCL_Freq 100000 //hz
@@ -22,10 +24,10 @@
 #define MAX_TRIES 50
 
 extern void init_I2C(void);
-extern unsigned char i2c_transmit(unsigned char type);
-extern char i2c_start(unsigned int I2C_Address, unsigned char rw_type);
-extern char i2c_start(unsigned int I2C_Address, unsigned char rw_type);
+extern uint8_t i2c_transmit(unsigned char type);
+extern uint8_t i2c_start(uint8_t I2C_Address, uint8_t rw_type);
+//extern uint8_t i2c_start(uint8_t I2C_Address, uint8_t rw_type);
 extern void i2c_stop(void);
-extern char i2c_write(char data);
-extern char i2c_read(char *data, char ack_type);
+extern uint8_t i2c_write(uint8_t data);
+extern uint8_t i2c_read(uint8_t *data, uint8_t ack_type);
 #endif /* I2C_H_ */

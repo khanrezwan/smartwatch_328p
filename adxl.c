@@ -63,8 +63,8 @@ void init_ADXL345() {
 
 }
 
-char check_ADXL345() {
-	char data;
+uint8_t check_ADXL345() {
+	uint8_t data;
 	i2c_start(ADXL345_I2C_Address, TW_WRITE);
 	i2c_write(0x00);
 	i2c_stop();
@@ -75,7 +75,7 @@ char check_ADXL345() {
 }
 
 void read_ADXL345(int *x, int* y, int *z) {
-	char buffer[6];
+	uint8_t buffer[6];
 	i2c_start(ADXL345_I2C_Address, TW_WRITE);
 	i2c_write(0x32);
 	i2c_stop();
@@ -87,8 +87,8 @@ void read_ADXL345(int *x, int* y, int *z) {
 	i2c_read(&buffer[4], ACK);
 	i2c_read(&buffer[5], NACK);
 	*x = buffer[1] << 8 | buffer[0];
-			*y = buffer[3] << 8 | buffer[2];
-			*z = buffer[5] << 8 | buffer[4];
+	*y = buffer[3] << 8 | buffer[2];
+	*z = buffer[5] << 8 | buffer[4];
 }
 
 void read_interrupt_source_ADXL345() {

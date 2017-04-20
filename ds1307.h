@@ -8,7 +8,7 @@
 #ifndef DS1307_H_
 #define DS1307_H_
 #include "i2c.h"
-
+#include <inttypes.h>
 #define DS1307_I2C_Address    0x68        // I2C DS1307 Device 7bit
 
 #define DS1307_SECOND 0x00
@@ -35,5 +35,6 @@ uint8_t DecToBcd(uint8_t value);
 uint8_t DS1307_Write(Time_t *time);
 uint8_t DS1307_Read(Time_t *time);
 uint8_t DS1307_read_Reg(uint8_t address);
-uint8_t DS1307_write_Reg(uint8_t address);
+uint8_t DS1307_write_Reg(uint8_t address, uint8_t data);
+uint8_t DS1307_check();
 #endif /* DS1307_H_ */

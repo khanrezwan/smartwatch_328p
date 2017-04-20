@@ -17,6 +17,7 @@
 #include "circular_buffer.h"
 #include "ds1307.h"
 circBuf_t RX_Q;
+Time_t time;
 ///////////////PIN Mapping///////
 //OLED
 #define OLED_CS PN(2,3)  // PC3 == arduino A3
@@ -86,6 +87,7 @@ int main(void) {
 	//u8g_InitSPI(&u8g, &u8g_dev_ssd1306_128x64_hw_spi, PN(1, 5)/*PB5 SCK*/, PN(1, 3)/*PB5 MOSI*/, PN(1, 2)/*PB5 SCK*/, PN(1, 1)/*PB1 CS*/, U8G_PIN_NONE);
 	OLED_init();
 	init_I2C();
+
 	DDRB |= (1 << PB0);
 	USART_init(MYUBRR, &RX_Q);
 	// Initialise the standard IO handlers
@@ -93,12 +95,29 @@ int main(void) {
 	if (check_ADXL345() == ADXL345_Dev_ID) {
 		//		printf("ready\r\n");
 		init_ADXL345();
-		printf("initialized\r\n");
+		printf("initialized ADXL\r\n");
 	} else {
 		//		printf("error\r\n");
 		while (1) {
 
 		}
+	}
+	if(DS1307_check()){
+		printf("initialized DS1307\r\n");
+		time.second = 0;
+		time.date = 3;
+		time.hour = 3;
+		time.month = 4;
+		time.year = 17;
+		time.weekday = 6;
+		if(!DS1307_Write(&time)){
+			printf("DS1307 write error");
+		}
+	}
+	else{
+		while (1) {
+
+				}
 	}
 	sei();
 	for (;;) {
@@ -123,7 +142,7 @@ int main(void) {
 		read_ADXL345(&dataX,&dataY, &dataZ);
 
 		//printf("%s",RX_Q.buffer);
-		//printf("%d %d %d\r\n", dataX, dataY, dataZ);
+		printf("%d %d %d\r\n", dataX, dataY, dataZ);
 		PORTB &= ~(1 << PB0);
 		if (check_USART_Complete()) {
 
@@ -132,6 +151,13 @@ int main(void) {
 
 		}
 		u8g_Delay(100);
+		if(DS1307_Read(&time)){
+			printf("Second = %d",time.second);
+		}
+		else{
+			printf("DS1307 read error");
+
+		}
 	}
 }
 

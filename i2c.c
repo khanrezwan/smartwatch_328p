@@ -5,9 +5,7 @@
  *      Author: rezwan
  */
 #include "i2c.h"
-#include <compat/twi.h>
-#include <math.h>
-#include <inttypes.h>
+
 //////////////I2C Functions start////////////////////////////////
 void init_I2C() {
 	TWBR = twBR;
@@ -16,7 +14,7 @@ void init_I2C() {
 
 }
 
-unsigned char i2c_transmit(unsigned char type) {
+uint8_t i2c_transmit(uint8_t type) {
 	switch (type) {
 	case I2C_START:    // Send Start Condition
 		TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN);
@@ -40,7 +38,7 @@ unsigned char i2c_transmit(unsigned char type) {
 
 }
 
-char i2c_start(unsigned int I2C_Address, unsigned char rw_type) {
+uint8_t i2c_start(uint8_t I2C_Address, uint8_t rw_type) {
 	unsigned char n = 0;
 	unsigned char twi_status;
 //  char r_val = -1;
@@ -52,7 +50,7 @@ char i2c_start(unsigned int I2C_Address, unsigned char rw_type) {
 		} else if ((twi_status != TW_START) && (twi_status != TW_REP_START)) {
 			//quit failure
 
-			return -1;
+			return 0;
 		} else {
 			// Send slave address (SLA_W)
 			TWDR = (I2C_Address<<1) | rw_type;
@@ -65,17 +63,17 @@ char i2c_start(unsigned int I2C_Address, unsigned char rw_type) {
 			} else if (twi_status != TW_MT_SLA_ACK) {
 				//quit failure
 
-				return -1;
+				return 0;
 			} else {
 				//return success
-				return 0;
+				return 1;
 			}
 		}
 
 //	  twi_status=i2c_transmit(I2C_START);
 		n++;
 	}
-	return -1;
+	return 0;
 }
 
 void i2c_stop(void) {
@@ -84,7 +82,7 @@ void i2c_stop(void) {
 	i2c_transmit(I2C_STOP);
 }
 
-char i2c_write(char data) {
+uint8_t i2c_write(uint8_t data) {
 	unsigned char twi_status;
 //  char r_val = -1;
 	// Send the Data to I2C Bus
@@ -93,31 +91,31 @@ char i2c_write(char data) {
 	twi_status = i2c_transmit(I2C_DATA);
 	// Check the TWSR status
 	if (twi_status != TW_MT_DATA_ACK) {
-		return -1; // failure
+		return 0; // failure
 	}
 
-	return 0; //success
+	return 1; //success
 }
 
-char i2c_read(char *data, char ack_type) {
+uint8_t i2c_read(uint8_t *data, uint8_t ack_type) {
 	unsigned char twi_status;
 
 	if (ack_type) {
 		// Read I2C Data and Send Acknowledge
 		twi_status = i2c_transmit(I2C_DATA_ACK);
 		if (twi_status != TW_MR_DATA_ACK) {
-			return -1; //failure
+			return 0; //failure
 		}
 	} else {
 		// Read I2C Data and Send No Acknowledge
 		twi_status = i2c_transmit(I2C_DATA);
 		if (twi_status != TW_MR_DATA_NACK) {
-			return -1; //failure
+			return 0; //failure
 		}
 	}
 	// Get the Data
 	*data = TWDR;
 
-	return 0; //success
+	return 1; //success
 }
 //////////////I2C Functions end////////////////////////////////
